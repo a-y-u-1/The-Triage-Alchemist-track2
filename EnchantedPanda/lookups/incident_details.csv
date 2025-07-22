@@ -1,0 +1,3 @@
+incident_sys_id,vm_name,gpt_response_summary,work_note
+abc123xyz456,linux-dev-01,High CPU due to Python process,"GPT Insight: High CPU from python3 (PID 1356)..."
+def456uvw789,win-prod-02,Memory pressure observed due to SQL Server,"GPT Insight: SQL Server using 5GB RAM. Consider index optimization..."

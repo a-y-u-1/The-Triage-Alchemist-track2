@@ -1,0 +1,136 @@
+<dashboard version="1.1" theme="light">
+  <label>VM Infra Insights</label>
+  <description>Unified overview of VM health and top consumers</description>
+  <row>
+    <panel>
+      <title>GPT Prompt per Host</title>
+      <table>
+        <search>
+          <query>index=infra
+          | stats latest(cpu_load_1min) as cpu_load,
+                   latest(memory_used_mb) as mem_used,
+                   latest(memory_total_mb) as mem_total,
+                   latest(disk_used) as disk_used,
+                   latest(disk_total) as disk_total,
+                   latest(uptime_seconds) as uptime
+                   by host
+          | eval uptime_hr=round(uptime/3600,1)
+          | fillnull value="TBC"
+          | eval gpt_prompt="Here are the latest stats for VM " . host . ":\n- CPU Load: " . cpu_load . "\n- Memory Used: " . mem_used . " MB / " . mem_total . " MB\n- Disk Used: " . disk_used . " / " . disk_total . "\n- Uptime: " . uptime_hr . " hours\n\nPlease analyze this data and provide recommendations or anomalies."
+          | table host gpt_prompt
+          |eval gpt_confidence = 0.96</query>
+          <earliest>0</earliest>
+          <latest></latest>
+        </search>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Sample ServiceNow Worknote Payload (GPT-Driven)</title>
+      <single>
+        <search>
+          <query>
+          | makeresults 
+          | eval payload="{ 
+  \"incident_sys_id\": \"abc123xyz456\", 
+  \"vm_name\": \"linux-dev-01\", 
+  \"gpt_response_summary\": \"The system is experiencing a CPU load spike due to a Python process consuming 85% CPU. Recommend restarting the process or reviewing the script for optimization.\", 
+  \"work_note\": \"GPT Insight:\\n- Host: linux-dev-01\\n- Issue: High CPU from python3 (PID 1356)\\n- Suggestion: Review or restart the process\\n\\nTimestamp: 2025-07-22T18:50:00Z\", 
+  \"posted_by\": \"Splunk-AIOps-Bot\" 
+}"
+        </query>
+          <earliest>0</earliest>
+          <latest></latest>
+        </search>
+        <option name="colorMode">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="textAlignment">left</option>
+        <option name="fontSize">small</option>
+        <option name="field">payload</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>CPU Load (1min Avg)</title>
+      <chart>
+        <search>
+          <query>index=infra  
+| timechart avg(cpu_load_1min) by vm_name</query>
+          <earliest>0</earliest>
+          <latest></latest>
+        </search>
+        <option name="charting.chart">line</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Memory Usage (MB)</title>
+      <chart>
+        <search>
+          <query>index=infra  
+| eval mem_used_pct=(memory_used_mb/memory_total_mb)*100
+| timechart avg(memory_used_mb) by vm_name</query>
+          <earliest>0</earliest>
+          <latest></latest>
+        </search>
+        <option name="charting.chart">area</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Top 5 CPU Consuming Processes (Latest)</title>
+      <table>
+        <search>
+          <query>index=infra_insights   
+| stats max(cpu_percent) as cpu by datetime, vm_name, proc_name, user
+| sort -cpu | head 5</query>
+          <earliest>0</earliest>
+          <latest></latest>
+        </search>
+      </table>
+    </panel>
+    <panel>
+      <title>Top 5 Memory Consuming Processes (Latest)</title>
+      <table>
+        <search>
+          <query>index=infra_insights   
+| stats max(memory_rss_mb) as mem by datetime, vm_name, proc_name, user
+| sort -mem | head 5</query>
+          <earliest>0</earliest>
+          <latest></latest>
+        </search>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Uptime by VM</title>
+      <chart>
+        <search>
+          <query>index=infra  
+| stats latest(uptime_seconds) as uptime by vm_name
+| eval uptime_hours=round(uptime/3600, 1)
+| sort -uptime_hours</query>
+          <earliest>0</earliest>
+          <latest></latest>
+        </search>
+        <option name="charting.chart">bar</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>OS Distribution</title>
+      <chart>
+        <search>
+          <query>index=infra  
+| stats dc(vm_name) as count by os_version</query>
+          <earliest>0</earliest>
+          <latest></latest>
+        </search>
+        <option name="charting.chart">pie</option>
+      </chart>
+    </panel>
+  </row>
+</dashboard>
